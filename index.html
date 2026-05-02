@@ -11,7 +11,6 @@
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body { font-family: sans-serif; background: #f5f5f5; }
 
-      /* LANGUAGE BAR */
       .lang-bar {
         background: #1a1764; padding: 10px 16px;
         display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
@@ -23,10 +22,7 @@
         font-size: 12px; cursor: pointer; transition: all 0.2s;
       }
       .lang-btn:hover { background: rgba(255,255,255,0.1); }
-      .lang-btn.active {
-        background: white; color: #1a1764; font-weight: 600;
-        border-color: white;
-      }
+      .lang-btn.active { background: white; color: #1a1764; font-weight: 600; border-color: white; }
 
       .header {
         background: #7F77DD; color: white;
@@ -38,8 +34,7 @@
       .menu { padding: 16px; max-width: 480px; margin: 0 auto; }
       .section-title {
         font-size: 13px; font-weight: 500; color: #999;
-        text-transform: uppercase; letter-spacing: 1px;
-        margin: 20px 0 10px;
+        text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 10px;
       }
       .dish {
         background: white; border-radius: 12px; padding: 14px;
@@ -68,7 +63,6 @@
         padding: 6px 10px; border-radius: 8px; font-size: 11px; cursor: pointer;
       }
 
-      /* RTL support for Arabic */
       body.rtl .dish { flex-direction: row-reverse; }
       body.rtl .dish-left { flex-direction: row-reverse; }
       body.rtl .dish-info p { text-align: right; }
@@ -77,17 +71,38 @@
       /* 3D viewer */
       #viewer-overlay {
         display: none; position: fixed; top: 0; left: 0;
-        width: 100%; height: 100%; background: rgba(0,0,0,0.88);
+        width: 100%; height: 100%; background: rgba(0,0,0,0.92);
         z-index: 100; flex-direction: column;
         align-items: center; justify-content: center;
       }
       #viewer-overlay.active { display: flex; }
-      #viewer-title { color: white; font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+      #viewer-title { color: white; font-size: 20px; font-weight: 500; margin-bottom: 4px; text-align: center; padding: 0 20px; }
       #viewer-price { color: #b8b3ff; font-size: 15px; margin-bottom: 16px; }
-      #three-canvas { width: 320px; height: 320px; border-radius: 16px; overflow: hidden; background: #1a1a2e; }
-      #loading-text { color: #aaa; font-size: 13px; margin-top: 10px; }
+      #three-canvas {
+        width: 320px; height: 320px; border-radius: 16px;
+        overflow: hidden; background: #1a1a2e;
+      }
+      #loading-box {
+        margin-top: 16px; text-align: center; min-height: 60px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+      }
+      .load-title { font-size: 15px; color: white; margin-bottom: 10px; }
+      .progress-bar-bg {
+        width: 280px; height: 10px;
+        background: rgba(255,255,255,0.15);
+        border-radius: 20px; overflow: hidden;
+      }
+      .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #7F77DD, #27ae60);
+        border-radius: 20px;
+        transition: width 0.3s ease;
+        width: 0%;
+      }
+      .load-msg { font-size: 12px; color: #aaa; margin-top: 8px; }
+
       #table-ar-btn-main {
-        margin-top: 12px; background: #27ae60; color: white;
+        margin-top: 14px; background: #27ae60; color: white;
         border: none; padding: 12px 28px; border-radius: 10px;
         font-size: 14px; cursor: pointer; width: 100%; max-width: 320px;
       }
@@ -146,8 +161,7 @@
       #mode-toggle.visible { display: flex; }
       .mode-btn {
         background: transparent; color: rgba(255,255,255,0.7);
-        border: none; padding: 8px 18px; border-radius: 26px;
-        font-size: 13px; cursor: pointer;
+        border: none; padding: 8px 18px; border-radius: 26px; font-size: 13px; cursor: pointer;
       }
       .mode-btn.active { background: white; color: #333; font-weight: 500; }
       #tip-label {
@@ -161,12 +175,12 @@
 
     <!-- LANGUAGE BAR -->
     <div class="lang-bar">
-      <button class="lang-btn active" onclick="setLang('en')">🇬🇧 EN</button>
-      <button class="lang-btn" onclick="setLang('ar')">🇸🇦 AR</button>
-      <button class="lang-btn" onclick="setLang('es')">🇪🇸 ES</button>
-      <button class="lang-btn" onclick="setLang('zh')">🇨🇳 中文</button>
-      <button class="lang-btn" onclick="setLang('fr')">🇫🇷 FR</button>
-      <button class="lang-btn" onclick="setLang('de')">🇩🇪 DE</button>
+      <button class="lang-btn active" onclick="setLang('en',this)">🇬🇧 EN</button>
+      <button class="lang-btn" onclick="setLang('ar',this)">🇸🇦 AR</button>
+      <button class="lang-btn" onclick="setLang('es',this)">🇪🇸 ES</button>
+      <button class="lang-btn" onclick="setLang('zh',this)">🇨🇳 中文</button>
+      <button class="lang-btn" onclick="setLang('fr',this)">🇫🇷 FR</button>
+      <button class="lang-btn" onclick="setLang('de',this)">🇩🇪 DE</button>
     </div>
 
     <!-- HEADER -->
@@ -177,6 +191,7 @@
 
     <!-- MENU -->
     <div class="menu">
+
       <div class="section-title" id="sec-starters">Starters</div>
 
       <div class="dish">
@@ -214,42 +229,25 @@
       </div>
 
       <div class="section-title" id="sec-mains">Mains</div>
-<div class="dish">
-  <div class="dish-left">
-    <div class="dish-img">🍗</div>
-    <div class="dish-info">
-      <h3 class="dish-name"
-        data-en="KFC 2 Leg Piece with Fries & Drink"
-        data-ar="قطعتا دجاج KFC مع بطاطس ومشروب"
-        data-es="KFC 2 Muslos con Papas y Bebida"
-        data-zh="KFC 2块鸡腿配薯条和饮料"
-        data-fr="KFC 2 Cuisses avec Frites et Boisson"
-        data-de="KFC 2 Hähnchenkeulen mit Pommes und Getränk">
-        KFC 2 Leg Piece with Fries &amp; Drink
-      </h3>
-      <p class="dish-desc"
-        data-en="Crispy fried chicken, seasoned fries & soft drink"
-        data-ar="دجاج مقلي مقرمش مع بطاطس متبلة ومشروب غازي"
-        data-es="Pollo frito crujiente, papas sazonadas y refresco"
-        data-zh="香脆炸鸡、调味薯条和软饮料"
-        data-fr="Poulet frit croustillant, frites assaisonnées et boisson"
-        data-de="Knuspriges Brathähnchen, gewürzte Pommes und Getränk">
-        Crispy fried chicken, seasoned fries &amp; soft drink
-      </p>
-    </div>
-  </div>
-  <div class="dish-right">
-    <div class="price">£9.99</div>
-    <div class="btn-group">
-      <button class="ar-btn" onclick="openViewer('KFC 2 Leg Piece','£9.99','#c0392b','Fast_Food_Feast_foo_0914170938_texture.glb')">
-        <span data-en="View in 3D" data-ar="عرض ثلاثي الأبعاد" data-es="Ver en 3D" data-zh="3D查看" data-fr="Voir en 3D" data-de="In 3D ansehen">View in 3D</span>
-      </button>
-      <button class="table-btn" onclick="openAR('KFC 2 Leg Piece','£9.99','#c0392b')">
-        <span data-en="📷 On Table" data-ar="📷 على الطاولة" data-es="📷 En Mesa" data-zh="📷 放桌上" data-fr="📷 Sur Table" data-de="📷 Auf Tisch">📷 On Table</span>
-      </button>
-    </div>
-  </div>
-</div>
+
+      <!-- KFC DISH -->
+      <div class="dish">
+        <div class="dish-left">
+          <div class="dish-img">🍗</div>
+          <div class="dish-info">
+            <h3 class="dish-name" data-en="KFC 2 Leg Piece with Fries & Drink" data-ar="قطعتا دجاج KFC مع بطاطس ومشروب" data-es="KFC 2 Muslos con Papas y Bebida" data-zh="KFC 2块鸡腿配薯条和饮料" data-fr="KFC 2 Cuisses avec Frites et Boisson" data-de="KFC 2 Hähnchenkeulen mit Pommes und Getränk">KFC 2 Leg Piece with Fries &amp; Drink</h3>
+            <p class="dish-desc" data-en="Crispy fried chicken, seasoned fries & soft drink" data-ar="دجاج مقلي مقرمش مع بطاطس متبلة ومشروب غازي" data-es="Pollo frito crujiente, papas sazonadas y refresco" data-zh="香脆炸鸡、调味薯条和软饮料" data-fr="Poulet frit croustillant, frites assaisonnées et boisson" data-de="Knuspriges Brathähnchen, gewürzte Pommes und Getränk">Crispy fried chicken, seasoned fries &amp; soft drink</p>
+          </div>
+        </div>
+        <div class="dish-right">
+          <div class="price">£9.99</div>
+          <div class="btn-group">
+            <button class="ar-btn" onclick="openViewer('KFC 2 Leg Piece','£9.99','#c0392b','Fast_Food_Feast_foo_0914170938_texture.glb')"><span data-en="View in 3D" data-ar="عرض ثلاثي الأبعاد" data-es="Ver en 3D" data-zh="3D查看" data-fr="Voir en 3D" data-de="In 3D ansehen">View in 3D</span></button>
+            <button class="table-btn" onclick="openAR('KFC 2 Leg Piece','£9.99','#c0392b')"><span data-en="📷 On Table" data-ar="📷 على الطاولة" data-es="📷 En Mesa" data-zh="📷 放桌上" data-fr="📷 Sur Table" data-de="📷 Auf Tisch">📷 On Table</span></button>
+          </div>
+        </div>
+      </div>
+
       <div class="dish">
         <div class="dish-left">
           <div class="dish-img">🍕</div>
@@ -319,6 +317,7 @@
           </div>
         </div>
       </div>
+
     </div>
 
     <!-- 3D VIEWER -->
@@ -326,7 +325,13 @@
       <div id="viewer-title">Dish</div>
       <div id="viewer-price">£0.00</div>
       <div id="three-canvas"></div>
-      <div id="loading-text">Loading 3D model...</div>
+      <div id="loading-box">
+        <div class="load-title" id="load-title">Loading 3D Model... 0%</div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progress-fill"></div>
+        </div>
+        <div class="load-msg" id="load-msg">🍽 Preparing your dish...</div>
+      </div>
       <button id="table-ar-btn-main" onclick="switchToAR()">📷 <span id="btn-table-text">View on Your Table</span></button>
       <button id="close-btn" onclick="closeViewer()"><span id="btn-close-text">✕ Close</span></button>
     </div>
@@ -354,102 +359,29 @@
     <script>
       // ── TRANSLATIONS ──
       const translations = {
-        en: {
-          headerTitle: '🍽 The AR Kitchen',
-          headerSub: 'Tap "On Table" to place any dish in AR',
-          starters: 'Starters', mains: 'Mains', desserts: 'Desserts',
-          viewTable: '📷 View on Your Table', close: '✕ Close',
-          place: '🍽 Place on Table', exitAR: '✕ Exit AR',
-          move: 'Move', rotate: 'Rotate',
-          instruction: 'Point at your table then tap Place',
-          tip: '✋ Move · 🔄 Rotate · Pinch to resize'
-        },
-        ar: {
-          headerTitle: '🍽 المطبخ AR',
-          headerSub: 'اضغط على "على الطاولة" لوضع أي طبق في الواقع المعزز',
-          starters: 'المقبلات', mains: 'الأطباق الرئيسية', desserts: 'الحلويات',
-          viewTable: '📷 عرض على طاولتك', close: '✕ إغلاق',
-          place: '🍽 ضع على الطاولة', exitAR: '✕ الخروج من AR',
-          move: 'تحريك', rotate: 'تدوير',
-          instruction: 'وجّه الكاميرا نحو طاولتك ثم اضغط وضع',
-          tip: '✋ تحريك · 🔄 تدوير · قرص للتكبير'
-        },
-        es: {
-          headerTitle: '🍽 La Cocina AR',
-          headerSub: 'Toca "En Mesa" para colocar cualquier plato en AR',
-          starters: 'Entrantes', mains: 'Platos Principales', desserts: 'Postres',
-          viewTable: '📷 Ver en Tu Mesa', close: '✕ Cerrar',
-          place: '🍽 Colocar en Mesa', exitAR: '✕ Salir de AR',
-          move: 'Mover', rotate: 'Rotar',
-          instruction: 'Apunta a tu mesa y toca Colocar',
-          tip: '✋ Mover · 🔄 Rotar · Pellizcar para cambiar tamaño'
-        },
-        zh: {
-          headerTitle: '🍽 AR 厨房',
-          headerSub: '点击"放桌上"将任意菜品放置在AR中',
-          starters: '前菜', mains: '主菜', desserts: '甜点',
-          viewTable: '📷 放在您的桌子上', close: '✕ 关闭',
-          place: '🍽 放到桌上', exitAR: '✕ 退出AR',
-          move: '移动', rotate: '旋转',
-          instruction: '将相机对准桌面，然后点击放置',
-          tip: '✋ 移动 · 🔄 旋转 · 双指缩放'
-        },
-        fr: {
-          headerTitle: '🍽 La Cuisine AR',
-          headerSub: 'Appuyez sur "Sur Table" pour placer un plat en AR',
-          starters: 'Entrées', mains: 'Plats Principaux', desserts: 'Desserts',
-          viewTable: '📷 Voir sur Votre Table', close: '✕ Fermer',
-          place: '🍽 Placer sur la Table', exitAR: '✕ Quitter AR',
-          move: 'Déplacer', rotate: 'Tourner',
-          instruction: 'Pointez vers votre table puis appuyez sur Placer',
-          tip: '✋ Déplacer · 🔄 Tourner · Pincer pour redimensionner'
-        },
-        de: {
-          headerTitle: '🍽 Die AR Küche',
-          headerSub: 'Tippe auf "Auf Tisch" um ein Gericht in AR zu platzieren',
-          starters: 'Vorspeisen', mains: 'Hauptgerichte', desserts: 'Desserts',
-          viewTable: '📷 Auf Ihrem Tisch ansehen', close: '✕ Schließen',
-          place: '🍽 Auf Tisch platzieren', exitAR: '✕ AR beenden',
-          move: 'Bewegen', rotate: 'Drehen',
-          instruction: 'Kamera auf Tisch richten, dann Platzieren tippen',
-          tip: '✋ Bewegen · 🔄 Drehen · Zusammendrücken zum Skalieren'
-        }
+        en: { headerTitle:'🍽 The AR Kitchen', headerSub:'Tap "On Table" to place any dish in AR', starters:'Starters', mains:'Mains', desserts:'Desserts', viewTable:'📷 View on Your Table', close:'✕ Close', place:'🍽 Place on Table', exitAR:'✕ Exit AR', move:'Move', rotate:'Rotate', instruction:'Point at your table then tap Place', tip:'✋ Move · 🔄 Rotate · Pinch to resize' },
+        ar: { headerTitle:'🍽 المطبخ AR', headerSub:'اضغط على "على الطاولة" لوضع أي طبق في الواقع المعزز', starters:'المقبلات', mains:'الأطباق الرئيسية', desserts:'الحلويات', viewTable:'📷 عرض على طاولتك', close:'✕ إغلاق', place:'🍽 ضع على الطاولة', exitAR:'✕ الخروج من AR', move:'تحريك', rotate:'تدوير', instruction:'وجّه الكاميرا نحو طاولتك ثم اضغط وضع', tip:'✋ تحريك · 🔄 تدوير · قرص للتكبير' },
+        es: { headerTitle:'🍽 La Cocina AR', headerSub:'Toca "En Mesa" para colocar cualquier plato en AR', starters:'Entrantes', mains:'Platos Principales', desserts:'Postres', viewTable:'📷 Ver en Tu Mesa', close:'✕ Cerrar', place:'🍽 Colocar en Mesa', exitAR:'✕ Salir de AR', move:'Mover', rotate:'Rotar', instruction:'Apunta a tu mesa y toca Colocar', tip:'✋ Mover · 🔄 Rotar · Pellizcar para cambiar tamaño' },
+        zh: { headerTitle:'🍽 AR 厨房', headerSub:'点击"放桌上"将任意菜品放置在AR中', starters:'前菜', mains:'主菜', desserts:'甜点', viewTable:'📷 放在您的桌子上', close:'✕ 关闭', place:'🍽 放到桌上', exitAR:'✕ 退出AR', move:'移动', rotate:'旋转', instruction:'将相机对准桌面，然后点击放置', tip:'✋ 移动 · 🔄 旋转 · 双指缩放' },
+        fr: { headerTitle:'🍽 La Cuisine AR', headerSub:'Appuyez sur "Sur Table" pour placer un plat en AR', starters:'Entrées', mains:'Plats Principaux', desserts:'Desserts', viewTable:'📷 Voir sur Votre Table', close:'✕ Fermer', place:'🍽 Placer sur la Table', exitAR:'✕ Quitter AR', move:'Déplacer', rotate:'Tourner', instruction:'Pointez vers votre table puis appuyez sur Placer', tip:'✋ Déplacer · 🔄 Tourner · Pincer pour redimensionner' },
+        de: { headerTitle:'🍽 Die AR Küche', headerSub:'Tippe auf "Auf Tisch" um ein Gericht in AR zu platzieren', starters:'Vorspeisen', mains:'Hauptgerichte', desserts:'Desserts', viewTable:'📷 Auf Ihrem Tisch ansehen', close:'✕ Schließen', place:'🍽 Auf Tisch platzieren', exitAR:'✕ AR beenden', move:'Bewegen', rotate:'Drehen', instruction:'Kamera auf Tisch richten, dann Platzieren tippen', tip:'✋ Bewegen · 🔄 Drehen · Zusammendrücken zum Skalieren' }
       };
 
       let currentLang = 'en';
 
-      function setLang(lang) {
+      function setLang(lang, btn) {
         currentLang = lang;
-
-        // Update active button
         document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-        event.target.classList.add('active');
-
+        btn.classList.add('active');
         const t = translations[lang];
-
-        // Header
         document.getElementById('header-title').textContent = t.headerTitle;
         document.getElementById('header-sub').textContent = t.headerSub;
-
-        // Section titles
         document.getElementById('sec-starters').textContent = t.starters;
         document.getElementById('sec-mains').textContent = t.mains;
         document.getElementById('sec-desserts').textContent = t.desserts;
-
-        // Dish names and descriptions
-        document.querySelectorAll('.dish-name').forEach(el => {
-          el.textContent = el.dataset[lang] || el.dataset.en;
-        });
-        document.querySelectorAll('.dish-desc').forEach(el => {
-          el.textContent = el.dataset[lang] || el.dataset.en;
-        });
-
-        // Button spans
-        document.querySelectorAll('[data-' + lang + ']').forEach(el => {
-          if (el.tagName === 'SPAN') el.textContent = el.dataset[lang] || el.dataset.en;
-        });
-
-        // Viewer buttons
+        document.querySelectorAll('.dish-name').forEach(el => { el.textContent = el.dataset[lang] || el.dataset.en; });
+        document.querySelectorAll('.dish-desc').forEach(el => { el.textContent = el.dataset[lang] || el.dataset.en; });
+        document.querySelectorAll('span[data-' + lang + ']').forEach(el => { el.textContent = el.dataset[lang] || el.dataset.en; });
         document.getElementById('btn-table-text').textContent = t.viewTable;
         document.getElementById('btn-close-text').textContent = t.close;
         document.getElementById('place-text').textContent = t.place;
@@ -458,14 +390,40 @@
         document.getElementById('rotate-text').textContent = t.rotate;
         document.getElementById('ar-instruction').textContent = t.instruction;
         document.getElementById('tip-label').textContent = t.tip;
-
-        // RTL for Arabic
         document.body.classList.toggle('rtl', lang === 'ar');
         document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
       }
 
+      // ── LOADING BAR ──
+      function setProgress(pct) {
+        pct = Math.min(100, Math.max(0, pct));
+        document.getElementById('progress-fill').style.width = pct + '%';
+        document.getElementById('load-title').textContent = 'Loading 3D Model... ' + pct + '%';
+        let msg = '🍽 Preparing your dish...';
+        if (pct >= 30 && pct < 60) msg = '🔄 Building 3D model...';
+        else if (pct >= 60 && pct < 90) msg = '✨ Almost ready...';
+        else if (pct >= 90) msg = '🚀 Loading complete!';
+        document.getElementById('load-msg').textContent = msg;
+      }
+
+      function setLoaded() {
+        document.getElementById('progress-fill').style.width = '100%';
+        document.getElementById('load-title').textContent = '✅ Loaded!';
+        document.getElementById('load-msg').textContent = 'Drag to rotate 360°';
+      }
+
+      function setLoadError() {
+        document.getElementById('load-title').textContent = '❌ Could not load model';
+        document.getElementById('load-msg').textContent = 'Please try again';
+        document.getElementById('progress-fill').style.background = '#e74c3c';
+      }
+
+      function resetLoadingBar() {
+        setProgress(0);
+      }
+
       // ── 3D VIEWER ──
-      let currentDish = { name:'', price:'', color:'#7F77DD', modelFile: null };
+      let currentDish = { name:'', price:'', color:'#7F77DD', modelFile:null };
       let threeRenderer, threeScene, threeCamera, threeControls, threeAnim;
       let arAnimId=null, videoStream=null;
       let dishPlaced=false;
@@ -478,19 +436,28 @@
         document.getElementById('viewer-title').textContent=name;
         document.getElementById('viewer-price').textContent=price;
         document.getElementById('viewer-overlay').classList.add('active');
-        document.getElementById('loading-text').textContent=modelFile?'Loading 3D model...':'Drag to rotate!';
+        resetLoadingBar();
+        if (!modelFile) {
+          document.getElementById('load-title').textContent='Drag to rotate!';
+          document.getElementById('load-msg').textContent='';
+          document.getElementById('progress-fill').style.width='100%';
+        }
         startThreeViewer(modelFile,color);
       }
+
       function closeViewer() {
         document.getElementById('viewer-overlay').classList.remove('active');
         stopThree();
       }
+
       function switchToAR() { closeViewer(); openAR(currentDish.name,currentDish.price,currentDish.color); }
+
       function stopThree() {
         if(threeAnim){cancelAnimationFrame(threeAnim);threeAnim=null;}
         if(threeRenderer){threeRenderer.dispose();threeRenderer=null;}
         document.getElementById('three-canvas').innerHTML='';
       }
+
       function startThreeViewer(modelFile,color) {
         stopThree();
         const container=document.getElementById('three-canvas');
@@ -509,29 +476,44 @@
         threeControls.enableDamping=true;
         threeControls.autoRotate=true;
         threeControls.autoRotateSpeed=3;
+
         if(modelFile){
           const loader=new THREE.GLTFLoader();
-          loader.load(modelFile,function(gltf){
-            const model=gltf.scene;
-            const box=new THREE.Box3().setFromObject(model);
-            const size=box.getSize(new THREE.Vector3());
-            const maxDim=Math.max(size.x,size.y,size.z);
-            model.scale.setScalar(0.8/maxDim);
-            const center=box.getCenter(new THREE.Vector3());
-            model.position.sub(center.multiplyScalar(0.8/maxDim));
-            threeScene.add(model);
-            document.getElementById('loading-text').textContent='🍕 Drag to rotate!';
-          },function(xhr){
-            const pct=Math.round(xhr.loaded/xhr.total*100);
-            document.getElementById('loading-text').textContent='Loading... '+pct+'%';
-          },function(){
-            document.getElementById('loading-text').textContent='Could not load model';
-            addFallbackShape(color);
-          });
-        } else { addFallbackShape(color); }
+          loader.load(
+            modelFile,
+            function(gltf){
+              const model=gltf.scene;
+              const box=new THREE.Box3().setFromObject(model);
+              const size=box.getSize(new THREE.Vector3());
+              const maxDim=Math.max(size.x,size.y,size.z);
+              model.scale.setScalar(0.8/maxDim);
+              const center=box.getCenter(new THREE.Vector3());
+              model.position.sub(center.multiplyScalar(0.8/maxDim));
+              threeScene.add(model);
+              setLoaded();
+            },
+            function(xhr){
+              if(xhr.total>0){
+                const pct=Math.round(xhr.loaded/xhr.total*100);
+                setProgress(pct);
+              } else {
+                // File size unknown — animate progress slowly
+                setProgress(30);
+              }
+            },
+            function(){
+              setLoadError();
+              addFallbackShape(color);
+            }
+          );
+        } else {
+          addFallbackShape(color);
+        }
+
         function loop(){threeAnim=requestAnimationFrame(loop);threeControls.update();threeRenderer.render(threeScene,threeCamera);}
         loop();
       }
+
       function addFallbackShape(color){
         const geo=new THREE.TorusGeometry(0.4,0.18,16,60);
         const mat=new THREE.MeshStandardMaterial({color:new THREE.Color(color)});
@@ -555,12 +537,14 @@
         document.getElementById('tip-label').style.display='none';
         startAR();
       }
+
       function closeAR(){
         document.getElementById('ar-overlay').classList.remove('active');
         if(arAnimId){cancelAnimationFrame(arAnimId);arAnimId=null;}
         if(videoStream){videoStream.getTracks().forEach(t=>t.stop());videoStream=null;}
         removeARListeners();
       }
+
       function placeDish(){
         dishPlaced=true;
         dish.x=window.innerWidth/2; dish.y=window.innerHeight*0.6;
@@ -572,64 +556,32 @@
         document.getElementById('ar-instruction').textContent=translations[currentLang].tip;
         addARListeners();
       }
+
       function setMode(mode){
         interactMode=mode;
         document.getElementById('btn-move').classList.toggle('active',mode==='move');
         document.getElementById('btn-rotate').classList.toggle('active',mode==='rotate');
       }
+
       function addARListeners(){
         const c=document.getElementById('ar-canvas');
-        c.addEventListener('mousedown',onDown);
-        c.addEventListener('mousemove',onMove);
-        c.addEventListener('mouseup',onUp);
-        c.addEventListener('touchstart',onTouchStart,{passive:false});
-        c.addEventListener('touchmove',onTouchMove,{passive:false});
-        c.addEventListener('touchend',onTouchEnd);
+        c.addEventListener('mousedown',onDown); c.addEventListener('mousemove',onMove); c.addEventListener('mouseup',onUp);
+        c.addEventListener('touchstart',onTouchStart,{passive:false}); c.addEventListener('touchmove',onTouchMove,{passive:false}); c.addEventListener('touchend',onTouchEnd);
       }
       function removeARListeners(){
         const c=document.getElementById('ar-canvas');
-        c.removeEventListener('mousedown',onDown);
-        c.removeEventListener('mousemove',onMove);
-        c.removeEventListener('mouseup',onUp);
-        c.removeEventListener('touchstart',onTouchStart);
-        c.removeEventListener('touchmove',onTouchMove);
-        c.removeEventListener('touchend',onTouchEnd);
+        c.removeEventListener('mousedown',onDown); c.removeEventListener('mousemove',onMove); c.removeEventListener('mouseup',onUp);
+        c.removeEventListener('touchstart',onTouchStart); c.removeEventListener('touchmove',onTouchMove); c.removeEventListener('touchend',onTouchEnd);
       }
       function onDown(e){dragging=true;lastX=e.clientX;lastY=e.clientY;}
       function onUp(){dragging=false;}
-      function onMove(e){
-        if(!dragging||!dishPlaced)return;
-        applyDrag(e.clientX-lastX,e.clientY-lastY);
-        lastX=e.clientX;lastY=e.clientY;
-      }
-      function onTouchStart(e){
-        e.preventDefault();
-        if(e.touches.length===1){dragging=true;lastX=e.touches[0].clientX;lastY=e.touches[0].clientY;}
-        if(e.touches.length===2)lastPinchDist=getPinchDist(e);
-      }
-      function onTouchMove(e){
-        e.preventDefault();
-        if(!dishPlaced)return;
-        if(e.touches.length===1&&dragging){
-          applyDrag(e.touches[0].clientX-lastX,e.touches[0].clientY-lastY);
-          lastX=e.touches[0].clientX;lastY=e.touches[0].clientY;
-        }
-        if(e.touches.length===2){
-          const d=getPinchDist(e);
-          if(lastPinchDist)dish.scale=Math.max(0.4,Math.min(2.5,dish.scale*d/lastPinchDist));
-          lastPinchDist=d;
-        }
-      }
+      function onMove(e){if(!dragging||!dishPlaced)return;applyDrag(e.clientX-lastX,e.clientY-lastY);lastX=e.clientX;lastY=e.clientY;}
+      function onTouchStart(e){e.preventDefault();if(e.touches.length===1){dragging=true;lastX=e.touches[0].clientX;lastY=e.touches[0].clientY;}if(e.touches.length===2)lastPinchDist=getPinchDist(e);}
+      function onTouchMove(e){e.preventDefault();if(!dishPlaced)return;if(e.touches.length===1&&dragging){applyDrag(e.touches[0].clientX-lastX,e.touches[0].clientY-lastY);lastX=e.touches[0].clientX;lastY=e.touches[0].clientY;}if(e.touches.length===2){const d=getPinchDist(e);if(lastPinchDist)dish.scale=Math.max(0.4,Math.min(2.5,dish.scale*d/lastPinchDist));lastPinchDist=d;}}
       function onTouchEnd(e){if(e.touches.length===0){dragging=false;lastPinchDist=null;}}
-      function getPinchDist(e){
-        const dx=e.touches[0].clientX-e.touches[1].clientX;
-        const dy=e.touches[0].clientY-e.touches[1].clientY;
-        return Math.sqrt(dx*dx+dy*dy);
-      }
-      function applyDrag(dx,dy){
-        if(interactMode==='move'){dish.x+=dx;dish.y+=dy;}
-        else{dish.rotY+=dx*0.012;dish.rotX=Math.max(-1.2,Math.min(1.2,dish.rotX+dy*0.008));}
-      }
+      function getPinchDist(e){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;return Math.sqrt(dx*dx+dy*dy);}
+      function applyDrag(dx,dy){if(interactMode==='move'){dish.x+=dx;dish.y+=dy;}else{dish.rotY+=dx*0.012;dish.rotX=Math.max(-1.2,Math.min(1.2,dish.rotX+dy*0.008));}}
+
       function startAR(){
         const canvas=document.getElementById('ar-canvas');
         const ctx=canvas.getContext('2d');
@@ -637,93 +589,38 @@
           .then(stream=>{
             videoStream=stream;
             const video=document.createElement('video');
-            video.srcObject=stream;
-            video.setAttribute('playsinline',true);
-            video.play();
+            video.srcObject=stream; video.setAttribute('playsinline',true); video.play();
             video.onloadedmetadata=()=>{
-              function loop(){
-                arAnimId=requestAnimationFrame(loop);
-                canvas.width=window.innerWidth;canvas.height=window.innerHeight;
-                ctx.drawImage(video,0,0,canvas.width,canvas.height);
-                if(dishPlaced)drawDish(ctx,canvas.width,canvas.height);
-              }
+              function loop(){arAnimId=requestAnimationFrame(loop);canvas.width=window.innerWidth;canvas.height=window.innerHeight;ctx.drawImage(video,0,0,canvas.width,canvas.height);if(dishPlaced)drawDish(ctx,canvas.width,canvas.height);}
               loop();
             };
           })
           .catch(()=>{
-            function loop(){
-              arAnimId=requestAnimationFrame(loop);
-              const W=canvas.width=window.innerWidth,H=canvas.height=window.innerHeight;
-              ctx.fillStyle='#c8a97a';ctx.fillRect(0,0,W,H);
-              for(let i=0;i<14;i++){
-                ctx.beginPath();ctx.moveTo(0,H/14*i);ctx.lineTo(W,H/14*i+6);
-                ctx.strokeStyle='rgba(150,100,40,0.18)';ctx.lineWidth=7;ctx.stroke();
-              }
-              ctx.fillStyle='rgba(0,0,0,0.45)';
-              roundRect(ctx,W/2-180,16,360,34,10);
-              ctx.fillStyle='white';ctx.font='13px sans-serif';ctx.textAlign='center';
-              ctx.fillText('📷 Simulated table · tap "Place on Table"',W/2,38);
-              if(dishPlaced)drawDish(ctx,W,H);
-            }
+            function loop(){arAnimId=requestAnimationFrame(loop);const W=canvas.width=window.innerWidth,H=canvas.height=window.innerHeight;ctx.fillStyle='#c8a97a';ctx.fillRect(0,0,W,H);for(let i=0;i<14;i++){ctx.beginPath();ctx.moveTo(0,H/14*i);ctx.lineTo(W,H/14*i+6);ctx.strokeStyle='rgba(150,100,40,0.18)';ctx.lineWidth=7;ctx.stroke();}ctx.fillStyle='rgba(0,0,0,0.45)';roundRect(ctx,W/2-180,16,360,34,10);ctx.fillStyle='white';ctx.font='13px sans-serif';ctx.textAlign='center';ctx.fillText('📷 Simulated table · tap "Place on Table"',W/2,38);if(dishPlaced)drawDish(ctx,W,H);}
             loop();
           });
       }
+
       function drawDish(ctx,W,H){
         const cx=dish.x,cy=dish.y;
         const base=Math.min(W,H)*0.22*dish.scale;
         const tilt=Math.cos(dish.rotX+0.3);
         const rx=base*Math.abs(Math.cos(dish.rotY));
-        const plateRY=base*0.28*tilt;
-        const foodH=base*0.45*tilt;
-        ctx.beginPath();ctx.ellipse(cx,cy+base*0.45,base*1.5,base*0.38*tilt,0,0,Math.PI*2);
-        ctx.fillStyle='rgba(255,255,255,0.07)';ctx.fill();
-        ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=1.5;ctx.stroke();
-        ctx.beginPath();ctx.ellipse(cx,cy+base*0.38,rx*0.85,plateRY*0.55,0,0,Math.PI*2);
-        ctx.fillStyle='rgba(0,0,0,0.28)';ctx.fill();
-        ctx.beginPath();ctx.ellipse(cx,cy+base*0.3,rx,plateRY,0,0,Math.PI*2);
-        ctx.fillStyle='#f5f0e8';ctx.fill();
-        ctx.strokeStyle='#e0d8cc';ctx.lineWidth=2;ctx.stroke();
-        ctx.beginPath();ctx.ellipse(cx,cy+base*0.27,rx*0.78,plateRY*0.78,0,0,Math.PI*2);
-        ctx.strokeStyle='#e8e0d0';ctx.lineWidth=1;ctx.stroke();
-        ctx.beginPath();ctx.ellipse(cx+base*0.04*Math.sin(dish.rotY),cy-base*0.04,rx*0.65,foodH,0,0,Math.PI*2);
-        ctx.fillStyle=currentDish.color;ctx.fill();
-        const grad=ctx.createLinearGradient(cx-rx*0.6,cy,cx+rx*0.6,cy);
-        grad.addColorStop(0,'rgba(0,0,0,0.3)');grad.addColorStop(0.4,'rgba(0,0,0,0)');
-        grad.addColorStop(0.6,'rgba(0,0,0,0)');grad.addColorStop(1,'rgba(0,0,0,0.25)');
-        ctx.beginPath();ctx.ellipse(cx+base*0.04*Math.sin(dish.rotY),cy-base*0.04,rx*0.65,foodH,0,0,Math.PI*2);
-        ctx.fillStyle=grad;ctx.fill();
-        ctx.beginPath();ctx.ellipse(cx-rx*0.2,cy-foodH*0.35,rx*0.28,foodH*0.22,-0.4,0,Math.PI*2);
-        ctx.fillStyle='rgba(255,255,255,0.22)';ctx.fill();
-        ctx.beginPath();ctx.ellipse(cx,cy+base*0.3,rx,plateRY,0,0,Math.PI*2);
-        ctx.strokeStyle='rgba(127,119,221,0.75)';ctx.lineWidth=3;ctx.stroke();
-        ctx.save();
-        ctx.fillStyle='rgba(0,0,0,0.6)';
-        roundRect(ctx,cx-75,cy-base-32,150,28,8);
-        ctx.fillStyle='white';ctx.font='bold 13px sans-serif';ctx.textAlign='center';
-        ctx.fillText(currentDish.name,cx,cy-base-13);
-        ctx.restore();
-        if(interactMode==='rotate'){
-          for(let i=0;i<12;i++){
-            const a=dish.rotY+(i/12)*Math.PI*2;
-            const dotX=cx+rx*1.25*Math.cos(a);
-            const dotY=cy+plateRY*1.25*Math.sin(a)*tilt+base*0.3;
-            ctx.beginPath();ctx.arc(dotX,dotY,i===0?5:3,0,Math.PI*2);
-            ctx.fillStyle=i===0?'white':'rgba(255,255,255,0.4)';ctx.fill();
-          }
-        }
+        const plateRY=base*0.28*tilt,foodH=base*0.45*tilt;
+        ctx.beginPath();ctx.ellipse(cx,cy+base*0.45,base*1.5,base*0.38*tilt,0,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.07)';ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=1.5;ctx.stroke();
+        ctx.beginPath();ctx.ellipse(cx,cy+base*0.38,rx*0.85,plateRY*0.55,0,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,0.28)';ctx.fill();
+        ctx.beginPath();ctx.ellipse(cx,cy+base*0.3,rx,plateRY,0,0,Math.PI*2);ctx.fillStyle='#f5f0e8';ctx.fill();ctx.strokeStyle='#e0d8cc';ctx.lineWidth=2;ctx.stroke();
+        ctx.beginPath();ctx.ellipse(cx,cy+base*0.27,rx*0.78,plateRY*0.78,0,0,Math.PI*2);ctx.strokeStyle='#e8e0d0';ctx.lineWidth=1;ctx.stroke();
+        ctx.beginPath();ctx.ellipse(cx+base*0.04*Math.sin(dish.rotY),cy-base*0.04,rx*0.65,foodH,0,0,Math.PI*2);ctx.fillStyle=currentDish.color;ctx.fill();
+        const grad=ctx.createLinearGradient(cx-rx*0.6,cy,cx+rx*0.6,cy);grad.addColorStop(0,'rgba(0,0,0,0.3)');grad.addColorStop(0.4,'rgba(0,0,0,0)');grad.addColorStop(0.6,'rgba(0,0,0,0)');grad.addColorStop(1,'rgba(0,0,0,0.25)');
+        ctx.beginPath();ctx.ellipse(cx+base*0.04*Math.sin(dish.rotY),cy-base*0.04,rx*0.65,foodH,0,0,Math.PI*2);ctx.fillStyle=grad;ctx.fill();
+        ctx.beginPath();ctx.ellipse(cx-rx*0.2,cy-foodH*0.35,rx*0.28,foodH*0.22,-0.4,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.22)';ctx.fill();
+        ctx.beginPath();ctx.ellipse(cx,cy+base*0.3,rx,plateRY,0,0,Math.PI*2);ctx.strokeStyle='rgba(127,119,221,0.75)';ctx.lineWidth=3;ctx.stroke();
+        ctx.save();ctx.fillStyle='rgba(0,0,0,0.6)';roundRect(ctx,cx-75,cy-base-32,150,28,8);ctx.fillStyle='white';ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.fillText(currentDish.name,cx,cy-base-13);ctx.restore();
+        if(interactMode==='rotate'){for(let i=0;i<12;i++){const a=dish.rotY+(i/12)*Math.PI*2;const dotX=cx+rx*1.25*Math.cos(a);const dotY=cy+plateRY*1.25*Math.sin(a)*tilt+base*0.3;ctx.beginPath();ctx.arc(dotX,dotY,i===0?5:3,0,Math.PI*2);ctx.fillStyle=i===0?'white':'rgba(255,255,255,0.4)';ctx.fill();}}
       }
-      function roundRect(ctx,x,y,w,h,r){
-        ctx.beginPath();
-        ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);
-        ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-        ctx.lineTo(x+w,y+h-r);
-        ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-        ctx.lineTo(x+r,y+h);
-        ctx.quadraticCurveTo(x,y+h,x,y+h-r);
-        ctx.lineTo(x,y+r);
-        ctx.quadraticCurveTo(x,y,x+r,y);
-        ctx.closePath();ctx.fill();
-      }
+
+      function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();ctx.fill();}
     </script>
   </body>
 </html>
