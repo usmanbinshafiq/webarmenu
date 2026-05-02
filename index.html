@@ -4,13 +4,33 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>AR Menu</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/examples/js/controls/OrbitControls.js"></script>
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body { font-family: sans-serif; background: #f5f5f5; }
 
+      /* LANGUAGE BAR */
+      .lang-bar {
+        background: #1a1764; padding: 10px 16px;
+        display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+      }
+      .lang-btn {
+        background: transparent; color: rgba(255,255,255,0.6);
+        border: 1px solid rgba(255,255,255,0.25);
+        padding: 5px 12px; border-radius: 20px;
+        font-size: 12px; cursor: pointer; transition: all 0.2s;
+      }
+      .lang-btn:hover { background: rgba(255,255,255,0.1); }
+      .lang-btn.active {
+        background: white; color: #1a1764; font-weight: 600;
+        border-color: white;
+      }
+
       .header {
         background: #7F77DD; color: white;
-        padding: 24px 20px 16px; text-align: center;
+        padding: 20px 20px 14px; text-align: center;
       }
       .header h1 { font-size: 22px; }
       .header p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
@@ -22,13 +42,20 @@
         margin: 20px 0 10px;
       }
       .dish {
-        background: white; border-radius: 12px; padding: 16px;
+        background: white; border-radius: 12px; padding: 14px;
         margin-bottom: 10px; display: flex;
         justify-content: space-between; align-items: center;
         border: 0.5px solid #eee;
       }
-      .dish-info h3 { font-size: 15px; color: #222; margin-bottom: 4px; }
-      .dish-info p { font-size: 12px; color: #888; max-width: 200px; }
+      .dish-img {
+        width: 64px; height: 64px; border-radius: 10px;
+        object-fit: cover; margin-right: 10px; flex-shrink: 0;
+        background: #f0ece4; display: flex; align-items: center;
+        justify-content: center; font-size: 28px;
+      }
+      .dish-left { display: flex; align-items: center; }
+      .dish-info h3 { font-size: 15px; color: #222; margin-bottom: 3px; }
+      .dish-info p { font-size: 12px; color: #888; max-width: 160px; }
       .dish-right { text-align: right; min-width: 95px; }
       .price { font-size: 16px; font-weight: 500; color: #7F77DD; }
       .btn-group { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
@@ -41,7 +68,13 @@
         padding: 6px 10px; border-radius: 8px; font-size: 11px; cursor: pointer;
       }
 
-      /* 3D spin viewer */
+      /* RTL support for Arabic */
+      body.rtl .dish { flex-direction: row-reverse; }
+      body.rtl .dish-left { flex-direction: row-reverse; }
+      body.rtl .dish-info p { text-align: right; }
+      body.rtl .dish-right { text-align: left; }
+
+      /* 3D viewer */
       #viewer-overlay {
         display: none; position: fixed; top: 0; left: 0;
         width: 100%; height: 100%; background: rgba(0,0,0,0.88);
@@ -51,18 +84,18 @@
       #viewer-overlay.active { display: flex; }
       #viewer-title { color: white; font-size: 20px; font-weight: 500; margin-bottom: 4px; }
       #viewer-price { color: #b8b3ff; font-size: 15px; margin-bottom: 16px; }
-      #canvas-container { width: 300px; height: 300px; border-radius: 16px; overflow: hidden; }
+      #three-canvas { width: 320px; height: 320px; border-radius: 16px; overflow: hidden; background: #1a1a2e; }
+      #loading-text { color: #aaa; font-size: 13px; margin-top: 10px; }
       #table-ar-btn-main {
         margin-top: 12px; background: #27ae60; color: white;
         border: none; padding: 12px 28px; border-radius: 10px;
-        font-size: 14px; cursor: pointer; width: 100%; max-width: 300px;
+        font-size: 14px; cursor: pointer; width: 100%; max-width: 320px;
       }
       #close-btn {
         margin-top: 10px; background: white; color: #333;
         border: none; padding: 10px 28px; border-radius: 10px;
         font-size: 14px; cursor: pointer;
       }
-      #hint { color: #aaa; font-size: 12px; margin-top: 8px; }
 
       /* AR view */
       #ar-overlay {
@@ -71,16 +104,13 @@
       }
       #ar-overlay.active { display: block; }
       #ar-canvas { width: 100%; height: 100%; display: block; touch-action: none; }
-
       #ar-header {
         position: fixed; top: 0; left: 0; width: 100%;
         background: rgba(0,0,0,0.6); color: white;
-        text-align: center; padding: 14px 16px 10px; z-index: 300;
-        pointer-events: none;
+        text-align: center; padding: 14px 16px 10px; z-index: 300; pointer-events: none;
       }
       #ar-dish-name { font-size: 17px; font-weight: 500; }
       #ar-instruction { font-size: 12px; opacity: 0.8; margin-top: 3px; }
-
       #ar-target {
         position: fixed; top: 50%; left: 50%;
         transform: translate(-50%, -50%);
@@ -93,10 +123,8 @@
         transform: translateX(-50%);
         color: white; font-size: 12px;
         background: rgba(0,0,0,0.5); padding: 4px 12px;
-        border-radius: 20px; z-index: 300; pointer-events: none;
-        white-space: nowrap;
+        border-radius: 20px; z-index: 300; pointer-events: none; white-space: nowrap;
       }
-
       #ar-controls {
         position: fixed; bottom: 20px; left: 50%;
         transform: translateX(-50%);
@@ -105,32 +133,23 @@
       }
       #ar-place-btn {
         background: #27ae60; color: white; border: none;
-        padding: 13px 36px; border-radius: 12px;
-        font-size: 15px; cursor: pointer;
+        padding: 13px 36px; border-radius: 12px; font-size: 15px; cursor: pointer;
       }
       #ar-close-btn {
         background: rgba(255,255,255,0.9); color: #333; border: none;
-        padding: 10px 28px; border-radius: 12px;
-        font-size: 14px; cursor: pointer;
+        padding: 10px 28px; border-radius: 12px; font-size: 14px; cursor: pointer;
       }
-
-      /* Mode toggle after placing */
       #mode-toggle {
-        display: none;
-        background: rgba(0,0,0,0.7);
-        border-radius: 30px; padding: 4px;
-        flex-direction: row; gap: 4px;
+        display: none; background: rgba(0,0,0,0.7);
+        border-radius: 30px; padding: 4px; flex-direction: row; gap: 4px;
       }
       #mode-toggle.visible { display: flex; }
       .mode-btn {
         background: transparent; color: rgba(255,255,255,0.7);
         border: none; padding: 8px 18px; border-radius: 26px;
-        font-size: 13px; cursor: pointer; transition: all 0.2s;
+        font-size: 13px; cursor: pointer;
       }
-      .mode-btn.active {
-        background: white; color: #333; font-weight: 500;
-      }
-
+      .mode-btn.active { background: white; color: #333; font-weight: 500; }
       #tip-label {
         color: white; font-size: 12px; text-align: center;
         background: rgba(0,0,0,0.45); padding: 5px 14px;
@@ -140,434 +159,527 @@
   </head>
   <body>
 
-    <!-- MENU -->
+    <!-- LANGUAGE BAR -->
+    <div class="lang-bar">
+      <button class="lang-btn active" onclick="setLang('en')">🇬🇧 EN</button>
+      <button class="lang-btn" onclick="setLang('ar')">🇸🇦 AR</button>
+      <button class="lang-btn" onclick="setLang('es')">🇪🇸 ES</button>
+      <button class="lang-btn" onclick="setLang('zh')">🇨🇳 中文</button>
+      <button class="lang-btn" onclick="setLang('fr')">🇫🇷 FR</button>
+      <button class="lang-btn" onclick="setLang('de')">🇩🇪 DE</button>
+    </div>
+
+    <!-- HEADER -->
     <div class="header">
-      <h1>🍽 The AR Kitchen</h1>
-      <p>Tap "On Table" to place any dish in AR</p>
+      <h1 id="header-title">🍽 The AR Kitchen</h1>
+      <p id="header-sub">Tap "On Table" to place any dish in AR</p>
     </div>
 
+    <!-- MENU -->
     <div class="menu">
-      <div class="section-title">Starters</div>
+      <div class="section-title" id="sec-starters">Starters</div>
+
       <div class="dish">
-        <div class="dish-info"><h3>Garlic Bread</h3><p>Toasted sourdough with herb butter</p></div>
-        <div class="dish-right"><div class="price">£4.99</div>
-          <div class="btn-group">
-            <button class="ar-btn" onclick="openViewer('Garlic Bread','£4.99','#f5a623')">View in 3D</button>
-            <button class="table-btn" onclick="openAR('Garlic Bread','£4.99','#f5a623')">📷 On Table</button>
+        <div class="dish-left">
+          <div class="dish-img">🥖</div>
+          <div class="dish-info">
+            <h3 class="dish-name" data-en="Garlic Bread" data-ar="خبز الثوم" data-es="Pan de Ajo" data-zh="蒜蓉面包" data-fr="Pain à l'Ail" data-de="Knoblauchbrot">Garlic Bread</h3>
+            <p class="dish-desc" data-en="Toasted sourdough with herb butter" data-ar="خبز محمص مع زبدة الأعشاب" data-es="Pan tostado con mantequilla de hierbas" data-zh="烤酸面包配香草黄油" data-fr="Pain grillé au beurre aux herbes" data-de="Geröstetes Sauerteigbrot mit Kräuterbutter">Toasted sourdough with herb butter</p>
           </div>
         </div>
-      </div>
-      <div class="dish">
-        <div class="dish-info"><h3>Soup of the Day</h3><p>Ask your server for today's choice</p></div>
-        <div class="dish-right"><div class="price">£5.99</div>
+        <div class="dish-right">
+          <div class="price">£4.99</div>
           <div class="btn-group">
-            <button class="ar-btn" onclick="openViewer('Soup of the Day','£5.99','#e05c2a')">View in 3D</button>
-            <button class="table-btn" onclick="openAR('Soup of the Day','£5.99','#e05c2a')">📷 On Table</button>
+            <button class="ar-btn" onclick="openViewer('Garlic Bread','£4.99','#f5a623',null)"><span data-en="View in 3D" data-ar="عرض ثلاثي الأبعاد" data-es="Ver en 3D" data-zh="3D查看" data-fr="Voir en 3D" data-de="In 3D ansehen">View in 3D</span></button>
+            <button class="table-btn" onclick="openAR('Garlic Bread','£4.99','#f5a623')"><span data-en="📷 On Table" data-ar="📷 على الطاولة" data-es="📷 En Mesa" data-zh="📷 放桌上" data-fr="📷 Sur Table" data-de="📷 Auf Tisch">📷 On Table</span></button>
           </div>
         </div>
       </div>
 
-      <div class="section-title">Mains</div>
       <div class="dish">
-        <div class="dish-info"><h3>Classic Burger</h3><p>Beef patty, cheddar, lettuce, tomato</p></div>
-        <div class="dish-right"><div class="price">£12.99</div>
-          <div class="btn-group">
-            <button class="ar-btn" onclick="openViewer('Classic Burger','£12.99','#c0392b')">View in 3D</button>
-            <button class="table-btn" onclick="openAR('Classic Burger','£12.99','#c0392b')">📷 On Table</button>
+        <div class="dish-left">
+          <div class="dish-img">🍲</div>
+          <div class="dish-info">
+            <h3 class="dish-name" data-en="Soup of the Day" data-ar="شوربة اليوم" data-es="Sopa del Día" data-zh="今日例汤" data-fr="Soupe du Jour" data-de="Tagessuppe">Soup of the Day</h3>
+            <p class="dish-desc" data-en="Ask your server for today's choice" data-ar="اسأل النادل عن اختيار اليوم" data-es="Pregunte al mesero por la elección de hoy" data-zh="请询问服务员今日推荐" data-fr="Demandez au serveur le choix du jour" data-de="Fragen Sie Ihren Kellner nach der heutigen Wahl">Ask your server for today's choice</p>
           </div>
         </div>
-      </div>
-      <div class="dish">
-        <div class="dish-info"><h3>Margherita Pizza</h3><p>Tomato, mozzarella, fresh basil</p></div>
-        <div class="dish-right"><div class="price">£11.99</div>
+        <div class="dish-right">
+          <div class="price">£5.99</div>
           <div class="btn-group">
-            <button class="ar-btn" onclick="openViewer('Margherita Pizza','£11.99','#e67e22')">View in 3D</button>
-            <button class="table-btn" onclick="openAR('Margherita Pizza','£11.99','#e67e22')">📷 On Table</button>
-          </div>
-        </div>
-      </div>
-      <div class="dish">
-        <div class="dish-info"><h3>Grilled Salmon</h3><p>With seasonal veg and lemon butter</p></div>
-        <div class="dish-right"><div class="price">£15.99</div>
-          <div class="btn-group">
-            <button class="ar-btn" onclick="openViewer('Grilled Salmon','£15.99','#e8a87c')">View in 3D</button>
-            <button class="table-btn" onclick="openAR('Grilled Salmon','£15.99','#e8a87c')">📷 On Table</button>
+            <button class="ar-btn" onclick="openViewer('Soup of the Day','£5.99','#e05c2a',null)"><span data-en="View in 3D" data-ar="عرض ثلاثي الأبعاد" data-es="Ver en 3D" data-zh="3D查看" data-fr="Voir en 3D" data-de="In 3D ansehen">View in 3D</span></button>
+            <button class="table-btn" onclick="openAR('Soup of the Day','£5.99','#e05c2a')"><span data-en="📷 On Table" data-ar="📷 على الطاولة" data-es="📷 En Mesa" data-zh="📷 放桌上" data-fr="📷 Sur Table" data-de="📷 Auf Tisch">📷 On Table</span></button>
           </div>
         </div>
       </div>
 
-      <div class="section-title">Desserts</div>
+      <div class="section-title" id="sec-mains">Mains</div>
+
       <div class="dish">
-        <div class="dish-info"><h3>Chocolate Brownie</h3><p>Warm brownie with vanilla ice cream</p></div>
-        <div class="dish-right"><div class="price">£6.99</div>
+        <div class="dish-left">
+          <div class="dish-img">🍕</div>
+          <div class="dish-info">
+            <h3 class="dish-name" data-en="Margherita Pizza" data-ar="بيتزا مارغريتا" data-es="Pizza Margarita" data-zh="玛格丽特披萨" data-fr="Pizza Margherita" data-de="Margherita Pizza">Margherita Pizza</h3>
+            <p class="dish-desc" data-en="Tomato, mozzarella, fresh basil" data-ar="طماطم وموزاريلا وريحان طازج" data-es="Tomate, mozzarella, albahaca fresca" data-zh="番茄、马苏里拉奶酪、新鲜罗勒" data-fr="Tomate, mozzarella, basilic frais" data-de="Tomate, Mozzarella, frisches Basilikum">Tomato, mozzarella, fresh basil</p>
+          </div>
+        </div>
+        <div class="dish-right">
+          <div class="price">£11.99</div>
           <div class="btn-group">
-            <button class="ar-btn" onclick="openViewer('Chocolate Brownie','£6.99','#6d4c41')">View in 3D</button>
-            <button class="table-btn" onclick="openAR('Chocolate Brownie','£6.99','#6d4c41')">📷 On Table</button>
+            <button class="ar-btn" onclick="openViewer('Margherita Pizza','£11.99','#e67e22','pizza.glb')"><span data-en="View in 3D" data-ar="عرض ثلاثي الأبعاد" data-es="Ver en 3D" data-zh="3D查看" data-fr="Voir en 3D" data-de="In 3D ansehen">View in 3D</span></button>
+            <button class="table-btn" onclick="openAR('Margherita Pizza','£11.99','#e67e22')"><span data-en="📷 On Table" data-ar="📷 على الطاولة" data-es="📷 En Mesa" data-zh="📷 放桌上" data-fr="📷 Sur Table" data-de="📷 Auf Tisch">📷 On Table</span></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="dish">
+        <div class="dish-left">
+          <div class="dish-img">🍔</div>
+          <div class="dish-info">
+            <h3 class="dish-name" data-en="Classic Burger" data-ar="برغر كلاسيكي" data-es="Hamburguesa Clásica" data-zh="经典汉堡" data-fr="Burger Classique" data-de="Klassischer Burger">Classic Burger</h3>
+            <p class="dish-desc" data-en="Beef patty, cheddar, lettuce, tomato" data-ar="لحم بقري وشيدر وخس وطماطم" data-es="Carne de res, cheddar, lechuga, tomate" data-zh="牛肉饼、切达奶酪、生菜、番茄" data-fr="Steak haché, cheddar, laitue, tomate" data-de="Rindfleisch, Cheddar, Salat, Tomate">Beef patty, cheddar, lettuce, tomato</p>
+          </div>
+        </div>
+        <div class="dish-right">
+          <div class="price">£12.99</div>
+          <div class="btn-group">
+            <button class="ar-btn" onclick="openViewer('Classic Burger','£12.99','#c0392b',null)"><span data-en="View in 3D" data-ar="عرض ثلاثي الأبعاد" data-es="Ver en 3D" data-zh="3D查看" data-fr="Voir en 3D" data-de="In 3D ansehen">View in 3D</span></button>
+            <button class="table-btn" onclick="openAR('Classic Burger','£12.99','#c0392b')"><span data-en="📷 On Table" data-ar="📷 على الطاولة" data-es="📷 En Mesa" data-zh="📷 放桌上" data-fr="📷 Sur Table" data-de="📷 Auf Tisch">📷 On Table</span></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="dish">
+        <div class="dish-left">
+          <div class="dish-img">🐟</div>
+          <div class="dish-info">
+            <h3 class="dish-name" data-en="Grilled Salmon" data-ar="سلمون مشوي" data-es="Salmón a la Plancha" data-zh="烤三文鱼" data-fr="Saumon Grillé" data-de="Gegrillter Lachs">Grilled Salmon</h3>
+            <p class="dish-desc" data-en="With seasonal veg and lemon butter" data-ar="مع خضروات موسمية وزبدة الليمون" data-es="Con verduras de temporada y mantequilla de limón" data-zh="配时令蔬菜和柠檬黄油" data-fr="Avec légumes de saison et beurre citronné" data-de="Mit Saisongemüse und Zitronenbutter">With seasonal veg and lemon butter</p>
+          </div>
+        </div>
+        <div class="dish-right">
+          <div class="price">£15.99</div>
+          <div class="btn-group">
+            <button class="ar-btn" onclick="openViewer('Grilled Salmon','£15.99','#e8a87c',null)"><span data-en="View in 3D" data-ar="عرض ثلاثي الأبعاد" data-es="Ver en 3D" data-zh="3D查看" data-fr="Voir en 3D" data-de="In 3D ansehen">View in 3D</span></button>
+            <button class="table-btn" onclick="openAR('Grilled Salmon','£15.99','#e8a87c')"><span data-en="📷 On Table" data-ar="📷 على الطاولة" data-es="📷 En Mesa" data-zh="📷 放桌上" data-fr="📷 Sur Table" data-de="📷 Auf Tisch">📷 On Table</span></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title" id="sec-desserts">Desserts</div>
+
+      <div class="dish">
+        <div class="dish-left">
+          <div class="dish-img">🍫</div>
+          <div class="dish-info">
+            <h3 class="dish-name" data-en="Chocolate Brownie" data-ar="براوني الشوكولاتة" data-es="Brownie de Chocolate" data-zh="巧克力布朗尼" data-fr="Brownie au Chocolat" data-de="Schokoladen Brownie">Chocolate Brownie</h3>
+            <p class="dish-desc" data-en="Warm brownie with vanilla ice cream" data-ar="براوني دافئ مع آيس كريم الفانيليا" data-es="Brownie caliente con helado de vainilla" data-zh="温热布朗尼配香草冰淇淋" data-fr="Brownie chaud avec glace à la vanille" data-de="Warmer Brownie mit Vanilleeis">Warm brownie with vanilla ice cream</p>
+          </div>
+        </div>
+        <div class="dish-right">
+          <div class="price">£6.99</div>
+          <div class="btn-group">
+            <button class="ar-btn" onclick="openViewer('Chocolate Brownie','£6.99','#6d4c41',null)"><span data-en="View in 3D" data-ar="عرض ثلاثي الأبعاد" data-es="Ver en 3D" data-zh="3D查看" data-fr="Voir en 3D" data-de="In 3D ansehen">View in 3D</span></button>
+            <button class="table-btn" onclick="openAR('Chocolate Brownie','£6.99','#6d4c41')"><span data-en="📷 On Table" data-ar="📷 على الطاولة" data-es="📷 En Mesa" data-zh="📷 放桌上" data-fr="📷 Sur Table" data-de="📷 Auf Tisch">📷 On Table</span></button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 3D SPIN VIEWER -->
+    <!-- 3D VIEWER -->
     <div id="viewer-overlay">
       <div id="viewer-title">Dish</div>
       <div id="viewer-price">£0.00</div>
-      <div id="canvas-container"><canvas id="myCanvas" width="300" height="300"></canvas></div>
-      <button id="table-ar-btn-main" onclick="switchToAR()">📷 View on Your Table</button>
-      <button id="close-btn" onclick="closeViewer()">✕ Close</button>
-      <div id="hint">Spinning preview · Place on your table below</div>
+      <div id="three-canvas"></div>
+      <div id="loading-text">Loading 3D model...</div>
+      <button id="table-ar-btn-main" onclick="switchToAR()">📷 <span id="btn-table-text">View on Your Table</span></button>
+      <button id="close-btn" onclick="closeViewer()"><span id="btn-close-text">✕ Close</span></button>
     </div>
 
     <!-- AR VIEW -->
     <div id="ar-overlay">
       <canvas id="ar-canvas"></canvas>
-
       <div id="ar-header">
         <div id="ar-dish-name">Dish</div>
         <div id="ar-instruction">Point at your table then tap Place</div>
       </div>
-
       <div id="ar-target"></div>
       <div id="ar-target-label">👇 Point at your table surface</div>
-
       <div id="ar-controls">
-        <div id="tip-label">👆 Drag to Move · Two fingers to Rotate</div>
+        <div id="tip-label">✋ Move · 🔄 Rotate · Pinch to resize</div>
         <div id="mode-toggle">
-          <button class="mode-btn active" id="btn-move" onclick="setMode('move')">✋ Move</button>
-          <button class="mode-btn" id="btn-rotate" onclick="setMode('rotate')">🔄 Rotate</button>
+          <button class="mode-btn active" id="btn-move" onclick="setMode('move')">✋ <span id="move-text">Move</span></button>
+          <button class="mode-btn" id="btn-rotate" onclick="setMode('rotate')">🔄 <span id="rotate-text">Rotate</span></button>
         </div>
-        <button id="ar-place-btn" onclick="placeDish()">🍽 Place on Table</button>
-        <button id="ar-close-btn" onclick="closeAR()">✕ Exit AR</button>
+        <button id="ar-place-btn" onclick="placeDish()"><span id="place-text">🍽 Place on Table</span></button>
+        <button id="ar-close-btn" onclick="closeAR()"><span id="ar-close-text">✕ Exit AR</span></button>
       </div>
     </div>
 
     <script>
-      // ── State ──
-      let animId = null, arAnimId = null;
-      let spinAngle = 0;
-      let currentDish = { name: '', price: '', color: '#7F77DD' };
-      let dishPlaced = false;
-      let videoStream = null;
+      // ── TRANSLATIONS ──
+      const translations = {
+        en: {
+          headerTitle: '🍽 The AR Kitchen',
+          headerSub: 'Tap "On Table" to place any dish in AR',
+          starters: 'Starters', mains: 'Mains', desserts: 'Desserts',
+          viewTable: '📷 View on Your Table', close: '✕ Close',
+          place: '🍽 Place on Table', exitAR: '✕ Exit AR',
+          move: 'Move', rotate: 'Rotate',
+          instruction: 'Point at your table then tap Place',
+          tip: '✋ Move · 🔄 Rotate · Pinch to resize'
+        },
+        ar: {
+          headerTitle: '🍽 المطبخ AR',
+          headerSub: 'اضغط على "على الطاولة" لوضع أي طبق في الواقع المعزز',
+          starters: 'المقبلات', mains: 'الأطباق الرئيسية', desserts: 'الحلويات',
+          viewTable: '📷 عرض على طاولتك', close: '✕ إغلاق',
+          place: '🍽 ضع على الطاولة', exitAR: '✕ الخروج من AR',
+          move: 'تحريك', rotate: 'تدوير',
+          instruction: 'وجّه الكاميرا نحو طاولتك ثم اضغط وضع',
+          tip: '✋ تحريك · 🔄 تدوير · قرص للتكبير'
+        },
+        es: {
+          headerTitle: '🍽 La Cocina AR',
+          headerSub: 'Toca "En Mesa" para colocar cualquier plato en AR',
+          starters: 'Entrantes', mains: 'Platos Principales', desserts: 'Postres',
+          viewTable: '📷 Ver en Tu Mesa', close: '✕ Cerrar',
+          place: '🍽 Colocar en Mesa', exitAR: '✕ Salir de AR',
+          move: 'Mover', rotate: 'Rotar',
+          instruction: 'Apunta a tu mesa y toca Colocar',
+          tip: '✋ Mover · 🔄 Rotar · Pellizcar para cambiar tamaño'
+        },
+        zh: {
+          headerTitle: '🍽 AR 厨房',
+          headerSub: '点击"放桌上"将任意菜品放置在AR中',
+          starters: '前菜', mains: '主菜', desserts: '甜点',
+          viewTable: '📷 放在您的桌子上', close: '✕ 关闭',
+          place: '🍽 放到桌上', exitAR: '✕ 退出AR',
+          move: '移动', rotate: '旋转',
+          instruction: '将相机对准桌面，然后点击放置',
+          tip: '✋ 移动 · 🔄 旋转 · 双指缩放'
+        },
+        fr: {
+          headerTitle: '🍽 La Cuisine AR',
+          headerSub: 'Appuyez sur "Sur Table" pour placer un plat en AR',
+          starters: 'Entrées', mains: 'Plats Principaux', desserts: 'Desserts',
+          viewTable: '📷 Voir sur Votre Table', close: '✕ Fermer',
+          place: '🍽 Placer sur la Table', exitAR: '✕ Quitter AR',
+          move: 'Déplacer', rotate: 'Tourner',
+          instruction: 'Pointez vers votre table puis appuyez sur Placer',
+          tip: '✋ Déplacer · 🔄 Tourner · Pincer pour redimensionner'
+        },
+        de: {
+          headerTitle: '🍽 Die AR Küche',
+          headerSub: 'Tippe auf "Auf Tisch" um ein Gericht in AR zu platzieren',
+          starters: 'Vorspeisen', mains: 'Hauptgerichte', desserts: 'Desserts',
+          viewTable: '📷 Auf Ihrem Tisch ansehen', close: '✕ Schließen',
+          place: '🍽 Auf Tisch platzieren', exitAR: '✕ AR beenden',
+          move: 'Bewegen', rotate: 'Drehen',
+          instruction: 'Kamera auf Tisch richten, dann Platzieren tippen',
+          tip: '✋ Bewegen · 🔄 Drehen · Zusammendrücken zum Skalieren'
+        }
+      };
 
-      // Dish position & rotation on table
-      let dish = { x: 0, y: 0, rotY: 0, rotX: 0, scale: 1 };
-      let interactMode = 'move'; // 'move' or 'rotate'
+      let currentLang = 'en';
 
-      // Touch/mouse tracking
-      let dragging = false;
-      let lastX = 0, lastY = 0;
-      let lastPinchDist = null;
+      function setLang(lang) {
+        currentLang = lang;
 
-      // ── MODE TOGGLE ──
-      function setMode(mode) {
-        interactMode = mode;
-        document.getElementById('btn-move').classList.toggle('active', mode === 'move');
-        document.getElementById('btn-rotate').classList.toggle('active', mode === 'rotate');
-        document.getElementById('tip-label').textContent =
-          mode === 'move' ? '✋ Drag to move dish' : '🔄 Drag to rotate 360°';
+        // Update active button
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+
+        const t = translations[lang];
+
+        // Header
+        document.getElementById('header-title').textContent = t.headerTitle;
+        document.getElementById('header-sub').textContent = t.headerSub;
+
+        // Section titles
+        document.getElementById('sec-starters').textContent = t.starters;
+        document.getElementById('sec-mains').textContent = t.mains;
+        document.getElementById('sec-desserts').textContent = t.desserts;
+
+        // Dish names and descriptions
+        document.querySelectorAll('.dish-name').forEach(el => {
+          el.textContent = el.dataset[lang] || el.dataset.en;
+        });
+        document.querySelectorAll('.dish-desc').forEach(el => {
+          el.textContent = el.dataset[lang] || el.dataset.en;
+        });
+
+        // Button spans
+        document.querySelectorAll('[data-' + lang + ']').forEach(el => {
+          if (el.tagName === 'SPAN') el.textContent = el.dataset[lang] || el.dataset.en;
+        });
+
+        // Viewer buttons
+        document.getElementById('btn-table-text').textContent = t.viewTable;
+        document.getElementById('btn-close-text').textContent = t.close;
+        document.getElementById('place-text').textContent = t.place;
+        document.getElementById('ar-close-text').textContent = t.exitAR;
+        document.getElementById('move-text').textContent = t.move;
+        document.getElementById('rotate-text').textContent = t.rotate;
+        document.getElementById('ar-instruction').textContent = t.instruction;
+        document.getElementById('tip-label').textContent = t.tip;
+
+        // RTL for Arabic
+        document.body.classList.toggle('rtl', lang === 'ar');
+        document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
       }
 
-      // ── 3D SPIN VIEWER ──
-      function openViewer(name, price, color) {
-        currentDish = { name, price, color };
-        document.getElementById('viewer-title').textContent = name;
-        document.getElementById('viewer-price').textContent = price;
+      // ── 3D VIEWER ──
+      let currentDish = { name:'', price:'', color:'#7F77DD', modelFile: null };
+      let threeRenderer, threeScene, threeCamera, threeControls, threeAnim;
+      let arAnimId=null, videoStream=null;
+      let dishPlaced=false;
+      let dish={x:0,y:0,rotY:0,rotX:-0.3,scale:1};
+      let interactMode='move';
+      let dragging=false,lastX=0,lastY=0,lastPinchDist=null;
+
+      function openViewer(name,price,color,modelFile) {
+        currentDish={name,price,color,modelFile};
+        document.getElementById('viewer-title').textContent=name;
+        document.getElementById('viewer-price').textContent=price;
         document.getElementById('viewer-overlay').classList.add('active');
-        spinAngle = 0;
-        if (animId) cancelAnimationFrame(animId);
-        drawSpinFrame();
+        document.getElementById('loading-text').textContent=modelFile?'Loading 3D model...':'Drag to rotate!';
+        startThreeViewer(modelFile,color);
       }
       function closeViewer() {
         document.getElementById('viewer-overlay').classList.remove('active');
-        if (animId) { cancelAnimationFrame(animId); animId = null; }
+        stopThree();
       }
-      function switchToAR() {
-        closeViewer();
-        openAR(currentDish.name, currentDish.price, currentDish.color);
+      function switchToAR() { closeViewer(); openAR(currentDish.name,currentDish.price,currentDish.color); }
+      function stopThree() {
+        if(threeAnim){cancelAnimationFrame(threeAnim);threeAnim=null;}
+        if(threeRenderer){threeRenderer.dispose();threeRenderer=null;}
+        document.getElementById('three-canvas').innerHTML='';
+      }
+      function startThreeViewer(modelFile,color) {
+        stopThree();
+        const container=document.getElementById('three-canvas');
+        threeScene=new THREE.Scene();
+        threeScene.background=new THREE.Color(0x1a1a2e);
+        threeCamera=new THREE.PerspectiveCamera(45,1,0.01,1000);
+        threeCamera.position.set(0,0.3,1.2);
+        threeRenderer=new THREE.WebGLRenderer({antialias:true});
+        threeRenderer.setSize(320,320);
+        threeRenderer.outputEncoding=THREE.sRGBEncoding;
+        container.appendChild(threeRenderer.domElement);
+        threeScene.add(new THREE.AmbientLight(0xffffff,1.5));
+        const dir=new THREE.DirectionalLight(0xffffff,2);
+        dir.position.set(3,5,3); threeScene.add(dir);
+        threeControls=new THREE.OrbitControls(threeCamera,threeRenderer.domElement);
+        threeControls.enableDamping=true;
+        threeControls.autoRotate=true;
+        threeControls.autoRotateSpeed=3;
+        if(modelFile){
+          const loader=new THREE.GLTFLoader();
+          loader.load(modelFile,function(gltf){
+            const model=gltf.scene;
+            const box=new THREE.Box3().setFromObject(model);
+            const size=box.getSize(new THREE.Vector3());
+            const maxDim=Math.max(size.x,size.y,size.z);
+            model.scale.setScalar(0.8/maxDim);
+            const center=box.getCenter(new THREE.Vector3());
+            model.position.sub(center.multiplyScalar(0.8/maxDim));
+            threeScene.add(model);
+            document.getElementById('loading-text').textContent='🍕 Drag to rotate!';
+          },function(xhr){
+            const pct=Math.round(xhr.loaded/xhr.total*100);
+            document.getElementById('loading-text').textContent='Loading... '+pct+'%';
+          },function(){
+            document.getElementById('loading-text').textContent='Could not load model';
+            addFallbackShape(color);
+          });
+        } else { addFallbackShape(color); }
+        function loop(){threeAnim=requestAnimationFrame(loop);threeControls.update();threeRenderer.render(threeScene,threeCamera);}
+        loop();
+      }
+      function addFallbackShape(color){
+        const geo=new THREE.TorusGeometry(0.4,0.18,16,60);
+        const mat=new THREE.MeshStandardMaterial({color:new THREE.Color(color)});
+        threeScene.add(new THREE.Mesh(geo,mat));
       }
 
-      function drawSpinFrame() {
-        const canvas = document.getElementById('myCanvas');
-        const ctx = canvas.getContext('2d');
-        const W = 300, H = 300, cx = W/2, cy = H/2;
-        ctx.fillStyle = '#1a1a2e'; ctx.fillRect(0, 0, W, H);
-        const rx = 110 * Math.abs(Math.cos(spinAngle * 0.8));
-        ctx.beginPath(); ctx.ellipse(cx, cy+62, rx*0.85, 22, 0, 0, Math.PI*2);
-        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fill();
-        ctx.beginPath(); ctx.ellipse(cx, cy+56, rx, 28, 0, 0, Math.PI*2);
-        ctx.fillStyle = '#f0ece4'; ctx.fill();
-        ctx.strokeStyle = '#ddd'; ctx.lineWidth = 2; ctx.stroke();
-        const fW = rx*0.75, fH = 55+8*Math.sin(spinAngle*2);
-        ctx.beginPath(); ctx.ellipse(cx, cy+20, fW*0.8, fH*0.55, 0, 0, Math.PI*2);
-        ctx.fillStyle = currentDish.color; ctx.fill();
-        ctx.beginPath(); ctx.ellipse(cx-12, cy+8, fW*0.3, fH*0.2, -0.3, 0, Math.PI*2);
-        ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fill();
-        for (let i=0;i<5;i++){
-          const sx=cx+(rx+15)*Math.cos(spinAngle+i*Math.PI*2/5);
-          const sy=cy+28*Math.sin(spinAngle+i*Math.PI*2/5);
-          ctx.beginPath(); ctx.arc(sx,sy,2.5,0,Math.PI*2);
-          ctx.fillStyle='rgba(255,255,255,0.25)'; ctx.fill();
-        }
-        spinAngle += 0.03;
-        animId = requestAnimationFrame(drawSpinFrame);
-      }
-
-      // ── AR VIEW ──
-      function openAR(name, price, color) {
-        currentDish = { name, price, color };
-        dishPlaced = false;
-        dish = { x: 0, y: 0, rotY: 0, rotX: -0.3, scale: 1 };
-        interactMode = 'move';
+      // ── AR ──
+      function openAR(name,price,color){
+        currentDish={...currentDish,name,price,color};
+        dishPlaced=false;
+        dish={x:0,y:0,rotY:0,rotX:-0.3,scale:1};
         setMode('move');
-
-        document.getElementById('ar-dish-name').textContent = name;
+        const t=translations[currentLang];
+        document.getElementById('ar-dish-name').textContent=name;
+        document.getElementById('ar-instruction').textContent=t.instruction;
         document.getElementById('ar-overlay').classList.add('active');
-        document.getElementById('ar-target').style.display = 'block';
-        document.getElementById('ar-target-label').style.display = 'block';
-        document.getElementById('ar-place-btn').style.display = 'block';
+        document.getElementById('ar-target').style.display='block';
+        document.getElementById('ar-target-label').style.display='block';
+        document.getElementById('ar-place-btn').style.display='block';
         document.getElementById('mode-toggle').classList.remove('visible');
-        document.getElementById('tip-label').style.display = 'none';
-        document.getElementById('ar-instruction').textContent = 'Point at your table then tap Place';
-
+        document.getElementById('tip-label').style.display='none';
         startAR();
       }
-
-      function closeAR() {
+      function closeAR(){
         document.getElementById('ar-overlay').classList.remove('active');
-        if (arAnimId) { cancelAnimationFrame(arAnimId); arAnimId = null; }
-        if (videoStream) { videoStream.getTracks().forEach(t => t.stop()); videoStream = null; }
+        if(arAnimId){cancelAnimationFrame(arAnimId);arAnimId=null;}
+        if(videoStream){videoStream.getTracks().forEach(t=>t.stop());videoStream=null;}
         removeARListeners();
       }
-
-      function placeDish() {
-        dishPlaced = true;
-        const W = window.innerWidth, H = window.innerHeight;
-        dish.x = W / 2; dish.y = H * 0.6;
-        document.getElementById('ar-target').style.display = 'none';
-        document.getElementById('ar-target-label').style.display = 'none';
-        document.getElementById('ar-place-btn').style.display = 'none';
+      function placeDish(){
+        dishPlaced=true;
+        dish.x=window.innerWidth/2; dish.y=window.innerHeight*0.6;
+        document.getElementById('ar-target').style.display='none';
+        document.getElementById('ar-target-label').style.display='none';
+        document.getElementById('ar-place-btn').style.display='none';
         document.getElementById('mode-toggle').classList.add('visible');
-        document.getElementById('tip-label').style.display = 'block';
-        document.getElementById('ar-instruction').textContent = 'Move or Rotate your dish!';
+        document.getElementById('tip-label').style.display='block';
+        document.getElementById('ar-instruction').textContent=translations[currentLang].tip;
         addARListeners();
       }
-
-      // ── Touch & Mouse Listeners ──
-      function addARListeners() {
-        const canvas = document.getElementById('ar-canvas');
-        canvas.addEventListener('mousedown', onDown);
-        canvas.addEventListener('mousemove', onMove);
-        canvas.addEventListener('mouseup', onUp);
-        canvas.addEventListener('touchstart', onTouchStart, { passive: false });
-        canvas.addEventListener('touchmove', onTouchMove, { passive: false });
-        canvas.addEventListener('touchend', onTouchEnd);
+      function setMode(mode){
+        interactMode=mode;
+        document.getElementById('btn-move').classList.toggle('active',mode==='move');
+        document.getElementById('btn-rotate').classList.toggle('active',mode==='rotate');
       }
-      function removeARListeners() {
-        const canvas = document.getElementById('ar-canvas');
-        canvas.removeEventListener('mousedown', onDown);
-        canvas.removeEventListener('mousemove', onMove);
-        canvas.removeEventListener('mouseup', onUp);
-        canvas.removeEventListener('touchstart', onTouchStart);
-        canvas.removeEventListener('touchmove', onTouchMove);
-        canvas.removeEventListener('touchend', onTouchEnd);
+      function addARListeners(){
+        const c=document.getElementById('ar-canvas');
+        c.addEventListener('mousedown',onDown);
+        c.addEventListener('mousemove',onMove);
+        c.addEventListener('mouseup',onUp);
+        c.addEventListener('touchstart',onTouchStart,{passive:false});
+        c.addEventListener('touchmove',onTouchMove,{passive:false});
+        c.addEventListener('touchend',onTouchEnd);
       }
-
-      // Mouse
-      function onDown(e) { dragging = true; lastX = e.clientX; lastY = e.clientY; }
-      function onUp() { dragging = false; }
-      function onMove(e) {
-        if (!dragging || !dishPlaced) return;
-        const dx = e.clientX - lastX, dy = e.clientY - lastY;
-        applyDrag(dx, dy);
-        lastX = e.clientX; lastY = e.clientY;
+      function removeARListeners(){
+        const c=document.getElementById('ar-canvas');
+        c.removeEventListener('mousedown',onDown);
+        c.removeEventListener('mousemove',onMove);
+        c.removeEventListener('mouseup',onUp);
+        c.removeEventListener('touchstart',onTouchStart);
+        c.removeEventListener('touchmove',onTouchMove);
+        c.removeEventListener('touchend',onTouchEnd);
       }
-
-      // Touch
-      function onTouchStart(e) {
+      function onDown(e){dragging=true;lastX=e.clientX;lastY=e.clientY;}
+      function onUp(){dragging=false;}
+      function onMove(e){
+        if(!dragging||!dishPlaced)return;
+        applyDrag(e.clientX-lastX,e.clientY-lastY);
+        lastX=e.clientX;lastY=e.clientY;
+      }
+      function onTouchStart(e){
         e.preventDefault();
-        if (e.touches.length === 1) {
-          dragging = true;
-          lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
-        }
-        if (e.touches.length === 2) { lastPinchDist = getPinchDist(e); }
+        if(e.touches.length===1){dragging=true;lastX=e.touches[0].clientX;lastY=e.touches[0].clientY;}
+        if(e.touches.length===2)lastPinchDist=getPinchDist(e);
       }
-      function onTouchMove(e) {
+      function onTouchMove(e){
         e.preventDefault();
-        if (!dishPlaced) return;
-        if (e.touches.length === 1 && dragging) {
-          const dx = e.touches[0].clientX - lastX;
-          const dy = e.touches[0].clientY - lastY;
-          applyDrag(dx, dy);
-          lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+        if(!dishPlaced)return;
+        if(e.touches.length===1&&dragging){
+          applyDrag(e.touches[0].clientX-lastX,e.touches[0].clientY-lastY);
+          lastX=e.touches[0].clientX;lastY=e.touches[0].clientY;
         }
-        if (e.touches.length === 2) {
-          const dist = getPinchDist(e);
-          if (lastPinchDist) {
-            dish.scale *= dist / lastPinchDist;
-            dish.scale = Math.max(0.4, Math.min(2.5, dish.scale));
-          }
-          lastPinchDist = dist;
+        if(e.touches.length===2){
+          const d=getPinchDist(e);
+          if(lastPinchDist)dish.scale=Math.max(0.4,Math.min(2.5,dish.scale*d/lastPinchDist));
+          lastPinchDist=d;
         }
       }
-      function onTouchEnd(e) {
-        if (e.touches.length === 0) { dragging = false; lastPinchDist = null; }
+      function onTouchEnd(e){if(e.touches.length===0){dragging=false;lastPinchDist=null;}}
+      function getPinchDist(e){
+        const dx=e.touches[0].clientX-e.touches[1].clientX;
+        const dy=e.touches[0].clientY-e.touches[1].clientY;
+        return Math.sqrt(dx*dx+dy*dy);
       }
-      function getPinchDist(e) {
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        return Math.sqrt(dx*dx + dy*dy);
+      function applyDrag(dx,dy){
+        if(interactMode==='move'){dish.x+=dx;dish.y+=dy;}
+        else{dish.rotY+=dx*0.012;dish.rotX=Math.max(-1.2,Math.min(1.2,dish.rotX+dy*0.008));}
       }
-
-      function applyDrag(dx, dy) {
-        if (interactMode === 'move') {
-          dish.x += dx; dish.y += dy;
-        } else {
-          // Rotate: horizontal drag = spin Y axis, vertical = tilt X axis
-          dish.rotY += dx * 0.012;
-          dish.rotX += dy * 0.008;
-          dish.rotX = Math.max(-1.2, Math.min(1.2, dish.rotX)); // limit tilt
-        }
-      }
-
-      // ── AR RENDER ──
-      function startAR() {
-        const canvas = document.getElementById('ar-canvas');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        const ctx = canvas.getContext('2d');
-
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
-          .then(stream => {
-            videoStream = stream;
-            const video = document.createElement('video');
-            video.srcObject = stream;
-            video.setAttribute('playsinline', true);
+      function startAR(){
+        const canvas=document.getElementById('ar-canvas');
+        const ctx=canvas.getContext('2d');
+        navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false})
+          .then(stream=>{
+            videoStream=stream;
+            const video=document.createElement('video');
+            video.srcObject=stream;
+            video.setAttribute('playsinline',true);
             video.play();
-            video.onloadedmetadata = () => arLoop(ctx, video);
+            video.onloadedmetadata=()=>{
+              function loop(){
+                arAnimId=requestAnimationFrame(loop);
+                canvas.width=window.innerWidth;canvas.height=window.innerHeight;
+                ctx.drawImage(video,0,0,canvas.width,canvas.height);
+                if(dishPlaced)drawDish(ctx,canvas.width,canvas.height);
+              }
+              loop();
+            };
           })
-          .catch(() => simLoop(ctx));
+          .catch(()=>{
+            function loop(){
+              arAnimId=requestAnimationFrame(loop);
+              const W=canvas.width=window.innerWidth,H=canvas.height=window.innerHeight;
+              ctx.fillStyle='#c8a97a';ctx.fillRect(0,0,W,H);
+              for(let i=0;i<14;i++){
+                ctx.beginPath();ctx.moveTo(0,H/14*i);ctx.lineTo(W,H/14*i+6);
+                ctx.strokeStyle='rgba(150,100,40,0.18)';ctx.lineWidth=7;ctx.stroke();
+              }
+              ctx.fillStyle='rgba(0,0,0,0.45)';
+              roundRect(ctx,W/2-180,16,360,34,10);
+              ctx.fillStyle='white';ctx.font='13px sans-serif';ctx.textAlign='center';
+              ctx.fillText('📷 Simulated table · tap "Place on Table"',W/2,38);
+              if(dishPlaced)drawDish(ctx,W,H);
+            }
+            loop();
+          });
       }
-
-      function arLoop(ctx, video) {
-        function loop() {
-          arAnimId = requestAnimationFrame(loop);
-          const W = canvas.width = window.innerWidth;
-          const H = canvas.height = window.innerHeight;
-          ctx.drawImage(video, 0, 0, W, H);
-          if (dishPlaced) drawDish(ctx, W, H);
-        }
-        const canvas = document.getElementById('ar-canvas');
-        loop();
-      }
-
-      function simLoop(ctx) {
-        const canvas = document.getElementById('ar-canvas');
-        function loop() {
-          arAnimId = requestAnimationFrame(loop);
-          const W = canvas.width = window.innerWidth;
-          const H = canvas.height = window.innerHeight;
-          // Simulated wood table
-          ctx.fillStyle = '#c8a97a'; ctx.fillRect(0, 0, W, H);
-          for (let i=0;i<14;i++){
-            ctx.beginPath();
-            ctx.moveTo(0, H/14*i); ctx.lineTo(W, H/14*i+6);
-            ctx.strokeStyle='rgba(150,100,40,0.18)'; ctx.lineWidth=7; ctx.stroke();
-          }
-          ctx.fillStyle='rgba(0,0,0,0.45)';
-          roundRect(ctx, W/2-170, 18, 340, 34, 10);
-          ctx.fillStyle='white'; ctx.font='13px sans-serif'; ctx.textAlign='center';
-          ctx.fillText('📷 Simulated table · tap "Place on Table"', W/2, 40);
-          if (dishPlaced) drawDish(ctx, W, H);
-        }
-        loop();
-      }
-
-      function drawDish(ctx, W, H) {
-        const cx = dish.x, cy = dish.y;
-        const baseScale = Math.min(W, H) * 0.22 * dish.scale;
-
-        // Perspective squish based on tilt angle
-        const tilt = Math.cos(dish.rotX + 0.3);
-        const spinCos = Math.cos(dish.rotY);
-        const spinSin = Math.sin(dish.rotY);
-
-        const rx = baseScale * Math.abs(spinCos);
-        const plateRY = baseScale * 0.28 * tilt;
-        const foodH = baseScale * 0.45 * tilt;
-
-        // Table surface glow
-        ctx.beginPath();
-        ctx.ellipse(cx, cy + baseScale*0.45, baseScale*1.5, baseScale*0.38*tilt, 0, 0, Math.PI*2);
-        ctx.fillStyle = 'rgba(255,255,255,0.07)'; ctx.fill();
-        ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1.5; ctx.stroke();
-
-        // Shadow
-        ctx.beginPath();
-        ctx.ellipse(cx, cy + baseScale*0.38, rx*0.85, plateRY*0.55, 0, 0, Math.PI*2);
-        ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fill();
-
-        // Plate
-        ctx.beginPath();
-        ctx.ellipse(cx, cy + baseScale*0.3, rx, plateRY, 0, 0, Math.PI*2);
-        ctx.fillStyle = '#f5f0e8'; ctx.fill();
-        ctx.strokeStyle = '#e0d8cc'; ctx.lineWidth = 2; ctx.stroke();
-
-        // Plate inner ring
-        ctx.beginPath();
-        ctx.ellipse(cx, cy + baseScale*0.27, rx*0.78, plateRY*0.78, 0, 0, Math.PI*2);
-        ctx.strokeStyle = '#e8e0d0'; ctx.lineWidth = 1; ctx.stroke();
-
-        // Food body — squished by tilt
-        ctx.beginPath();
-        ctx.ellipse(cx + baseScale*0.04*spinSin, cy - baseScale*0.04, rx*0.65, foodH, 0, 0, Math.PI*2);
-        ctx.fillStyle = currentDish.color; ctx.fill();
-
-        // Food side shading (gives 3D depth when rotated)
-        const grad = ctx.createLinearGradient(cx - rx*0.6, cy, cx + rx*0.6, cy);
-        grad.addColorStop(0, 'rgba(0,0,0,0.3)');
-        grad.addColorStop(0.4, 'rgba(0,0,0,0)');
-        grad.addColorStop(0.6, 'rgba(0,0,0,0)');
-        grad.addColorStop(1, 'rgba(0,0,0,0.25)');
-        ctx.beginPath();
-        ctx.ellipse(cx + baseScale*0.04*spinSin, cy - baseScale*0.04, rx*0.65, foodH, 0, 0, Math.PI*2);
-        ctx.fillStyle = grad; ctx.fill();
-
-        // Top highlight
-        ctx.beginPath();
-        ctx.ellipse(cx - rx*0.2, cy - foodH*0.35, rx*0.28, foodH*0.22, -0.4, 0, Math.PI*2);
-        ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fill();
-
-        // AR glow ring around plate
-        ctx.beginPath();
-        ctx.ellipse(cx, cy + baseScale*0.3, rx, plateRY, 0, 0, Math.PI*2);
-        ctx.strokeStyle = 'rgba(127,119,221,0.75)'; ctx.lineWidth = 3; ctx.stroke();
-
-        // Dish name label
+      function drawDish(ctx,W,H){
+        const cx=dish.x,cy=dish.y;
+        const base=Math.min(W,H)*0.22*dish.scale;
+        const tilt=Math.cos(dish.rotX+0.3);
+        const rx=base*Math.abs(Math.cos(dish.rotY));
+        const plateRY=base*0.28*tilt;
+        const foodH=base*0.45*tilt;
+        ctx.beginPath();ctx.ellipse(cx,cy+base*0.45,base*1.5,base*0.38*tilt,0,0,Math.PI*2);
+        ctx.fillStyle='rgba(255,255,255,0.07)';ctx.fill();
+        ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=1.5;ctx.stroke();
+        ctx.beginPath();ctx.ellipse(cx,cy+base*0.38,rx*0.85,plateRY*0.55,0,0,Math.PI*2);
+        ctx.fillStyle='rgba(0,0,0,0.28)';ctx.fill();
+        ctx.beginPath();ctx.ellipse(cx,cy+base*0.3,rx,plateRY,0,0,Math.PI*2);
+        ctx.fillStyle='#f5f0e8';ctx.fill();
+        ctx.strokeStyle='#e0d8cc';ctx.lineWidth=2;ctx.stroke();
+        ctx.beginPath();ctx.ellipse(cx,cy+base*0.27,rx*0.78,plateRY*0.78,0,0,Math.PI*2);
+        ctx.strokeStyle='#e8e0d0';ctx.lineWidth=1;ctx.stroke();
+        ctx.beginPath();ctx.ellipse(cx+base*0.04*Math.sin(dish.rotY),cy-base*0.04,rx*0.65,foodH,0,0,Math.PI*2);
+        ctx.fillStyle=currentDish.color;ctx.fill();
+        const grad=ctx.createLinearGradient(cx-rx*0.6,cy,cx+rx*0.6,cy);
+        grad.addColorStop(0,'rgba(0,0,0,0.3)');grad.addColorStop(0.4,'rgba(0,0,0,0)');
+        grad.addColorStop(0.6,'rgba(0,0,0,0)');grad.addColorStop(1,'rgba(0,0,0,0.25)');
+        ctx.beginPath();ctx.ellipse(cx+base*0.04*Math.sin(dish.rotY),cy-base*0.04,rx*0.65,foodH,0,0,Math.PI*2);
+        ctx.fillStyle=grad;ctx.fill();
+        ctx.beginPath();ctx.ellipse(cx-rx*0.2,cy-foodH*0.35,rx*0.28,foodH*0.22,-0.4,0,Math.PI*2);
+        ctx.fillStyle='rgba(255,255,255,0.22)';ctx.fill();
+        ctx.beginPath();ctx.ellipse(cx,cy+base*0.3,rx,plateRY,0,0,Math.PI*2);
+        ctx.strokeStyle='rgba(127,119,221,0.75)';ctx.lineWidth=3;ctx.stroke();
         ctx.save();
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        roundRect(ctx, cx - 75, cy - baseScale - 32, 150, 28, 8);
-        ctx.fillStyle = 'white'; ctx.font = 'bold 13px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(currentDish.name, cx, cy - baseScale - 13);
+        ctx.fillStyle='rgba(0,0,0,0.6)';
+        roundRect(ctx,cx-75,cy-base-32,150,28,8);
+        ctx.fillStyle='white';ctx.font='bold 13px sans-serif';ctx.textAlign='center';
+        ctx.fillText(currentDish.name,cx,cy-base-13);
         ctx.restore();
-
-        // Rotation indicator dots (360° ring)
-        if (interactMode === 'rotate') {
-          for (let i=0;i<12;i++){
-            const a = dish.rotY + (i/12)*Math.PI*2;
-            const dotX = cx + rx*1.25*Math.cos(a);
-            const dotY = cy + plateRY*1.25*Math.sin(a)*tilt + baseScale*0.3;
-            const dotR = i===0 ? 5 : 3;
-            ctx.beginPath(); ctx.arc(dotX, dotY, dotR, 0, Math.PI*2);
-            ctx.fillStyle = i===0 ? 'white' : 'rgba(255,255,255,0.4)';
-            ctx.fill();
+        if(interactMode==='rotate'){
+          for(let i=0;i<12;i++){
+            const a=dish.rotY+(i/12)*Math.PI*2;
+            const dotX=cx+rx*1.25*Math.cos(a);
+            const dotY=cy+plateRY*1.25*Math.sin(a)*tilt+base*0.3;
+            ctx.beginPath();ctx.arc(dotX,dotY,i===0?5:3,0,Math.PI*2);
+            ctx.fillStyle=i===0?'white':'rgba(255,255,255,0.4)';ctx.fill();
           }
         }
       }
-
-      function roundRect(ctx, x, y, w, h, r) {
+      function roundRect(ctx,x,y,w,h,r){
         ctx.beginPath();
-        ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+        ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);
         ctx.quadraticCurveTo(x+w,y,x+w,y+r);
         ctx.lineTo(x+w,y+h-r);
         ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
@@ -575,7 +687,7 @@
         ctx.quadraticCurveTo(x,y+h,x,y+h-r);
         ctx.lineTo(x,y+r);
         ctx.quadraticCurveTo(x,y,x+r,y);
-        ctx.closePath(); ctx.fill();
+        ctx.closePath();ctx.fill();
       }
     </script>
   </body>
